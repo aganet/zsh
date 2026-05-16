@@ -389,6 +389,26 @@ All defined in `aliasrc`. Each block is gated by `command -v <tool>`, so missing
 | `uvpy`   | `uv python install <ver>` (install a CPython version)   |
 | `uvx`    | one-shot tool runner — like `pipx run` (`uvx ruff …`)   |
 
+### GitHub CLI (`gh`)
+
+| Alias     | Expands to                                                |
+|-----------|-----------------------------------------------------------|
+| `ghv`     | `gh repo view --web` (open this repo in browser)          |
+| `ghc`     | `gh repo clone owner/repo`                                |
+| `ghf`     | `gh repo fork --clone`                                    |
+| `ghpr`    | `gh pr create --web` (PR-creation page in browser)        |
+| `ghprl`   | `gh pr list`                                              |
+| `ghprv`   | `gh pr view --web` (view current branch's PR)             |
+| `ghprco`  | `gh pr checkout <number>`                                 |
+| `ghprm`   | `gh pr merge --squash --delete-branch`                    |
+| `ghprs`   | `gh pr status` (yours + needing review)                   |
+| `ghi`     | `gh issue create --web`                                   |
+| `ghil`    | `gh issue list`                                           |
+| `ghiv`    | `gh issue view --web <number>`                            |
+| `ghrun`   | `gh run list` (recent workflow runs)                      |
+| `ghwatch` | `gh run watch` (live-watch a run)                         |
+| `gha`     | `gh auth status`                                          |
+
 ### Git extras
 
 OMZ's `git` plugin covers the basics (`gst`, `gco`, `gp`, `glo`, etc.); these are extras:
@@ -664,6 +684,36 @@ tfw list                            # workspaces
 tfs list                            # state contents
 tfo db_url                          # output a single value
 to plan                             # same workflow on OpenTofu
+```
+
+#### Using the GitHub CLI aliases
+
+```sh
+# Repo / clone / browser
+ghv                                 # open current repo's GitHub page
+ghc anthropics/claude-code          # clone owner/repo
+ghf rust-lang/rust                  # fork + clone in one step
+
+# Pull requests
+ghpr                                # open PR-create page for current branch
+ghprs                               # mine + needing review
+ghprl --state=open --author=@me     # open PRs I authored
+ghprv                               # view current branch's PR in browser
+ghprco 1234                         # checkout PR #1234 locally
+ghprm                               # squash-merge + delete branch
+
+# Issues
+ghi                                 # create issue in browser
+ghil --label bug                    # filter by label
+ghiv 42                             # view issue #42 in browser
+
+# CI / Actions
+ghrun                               # last 20 workflow runs
+ghwatch                             # watch the latest run live
+gh run view --log-failed            # logs from failed jobs (no alias — too niche)
+
+# Auth
+gha                                 # who am I logged in as?
 ```
 
 #### Using the Helm aliases

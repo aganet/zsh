@@ -161,6 +161,34 @@ if command -v uv &>/dev/null; then
   alias uvx='uvx'                   # one-shot tool runner (ships with uv)
 fi
 
+# -- GitHub CLI (gh) ---------------------------------------------------------
+if command -v gh &>/dev/null; then
+  # Repo
+  alias ghv='gh repo view --web'                  # open current repo in browser
+  alias ghc='gh repo clone'                       # ghc owner/repo
+  alias ghf='gh repo fork --clone'
+
+  # Pull requests
+  alias ghpr='gh pr create --web'                 # open PR creation page
+  alias ghprl='gh pr list'
+  alias ghprv='gh pr view --web'                  # view current branch's PR
+  alias ghprco='gh pr checkout'                   # ghprco <number>
+  alias ghprm='gh pr merge --squash --delete-branch'
+  alias ghprs='gh pr status'                      # mine + needing review
+
+  # Issues
+  alias ghi='gh issue create --web'
+  alias ghil='gh issue list'
+  alias ghiv='gh issue view --web'                # ghiv <number>
+
+  # Actions / workflows
+  alias ghrun='gh run list'                       # recent workflow runs
+  alias ghwatch='gh run watch'                    # live-watch a run
+
+  # Auth
+  alias gha='gh auth status'
+fi
+
 # -- Git extras (OMZ git plugin already covers gs/gco/gp/glo/etc.) -----------
 alias gpr='git pull --rebase'
 # Delete local branches whose remote tracking branch is gone
