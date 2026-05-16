@@ -1,5 +1,7 @@
 # My zsh config
 
+![My zsh setup in action](docs/img/zsh.png)
+
 **Repo:** [github.com/aganet/zsh](https://github.com/aganet/zsh) — the whole config lives there. Clone it, fork it, copy whatever bits look useful.
 
 This is the zsh setup I use on every machine — Arch at home, Fedora at work, macOS on the laptop, and whatever distro a work VM happens to be running. **Same config everywhere — features adapt to what's installed.** The post below explains what's in it, why I made the choices I did, and how I actually use it day-to-day.
