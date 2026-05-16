@@ -6,6 +6,26 @@ Auto-detects the host OS (macOS / Fedora / Arch / generic Linux) and only loads 
 
 ---
 
+## Quick start (TL;DR)
+
+```bash
+# 1. tell zsh where the config lives
+echo 'export ZDOTDIR="$HOME/.config/zsh"' > ~/.zshenv
+
+# 2. clone this repo into ~/.config/zsh
+mkdir -p ~/.config && cd ~/.config
+git clone https://github.com/aganet/zsh.git
+
+# 3. install Oh My Zsh + Powerlevel10k + required plugins (see Install §3-5)
+# 4. install the CLI tools for your platform (see Install §6)
+# 5. set zsh as your login shell
+chsh -s "$(command -v zsh)"
+```
+
+Full step-by-step below.
+
+---
+
 ## What this config gives you
 
 **Prompt & shell**
@@ -49,9 +69,12 @@ Required everywhere:
 ### 1. Clone this repo into `$XDG_CONFIG_HOME/zsh`
 
 ```bash
-# fresh setup
-git clone <your-repo-url> ~/.config/zsh
+mkdir -p ~/.config
+cd ~/.config
+git clone https://github.com/aganet/zsh.git
 ```
+
+Because the repo is named `zsh`, it clones straight into `~/.config/zsh/` — no rename needed.
 
 If you're putting this folder *inside* an existing dotfiles repo, just symlink or copy `.zshrc` into `~/.config/zsh/`.
 
