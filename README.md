@@ -2,14 +2,14 @@
 
 ![My zsh setup in action](docs/img/zsh.png)
 
-Cross-platform zsh config for macOS, Arch, Fedora, and Linux VMs.
+Cross-platform zsh config for macOS, Arch, Fedora, and Linux.
 
-Built on **Oh My Zsh + Powerlevel10k**, with modern CLI tools (`eza`, `bat`, `fd`, `zoxide`, `direnv`, `fzf-tab`, `delta`) and DevOps aliases for `kubectl`, `docker`, `terraform`, `helm`, `aws`, `az`, `gh`, `uv`, `mise`, and more.
+Built on **Oh My Zsh + Powerlevel10k** with modern CLI tools (`eza`, `bat`, `fzf`, `zoxide`, `direnv`, `delta`) and DevOps tooling (`kubectl`, `docker`, `terraform`, `helm`, `aws`, `az`, `gh`, `uv`, `mise`).
 
+- Same config on every machine
 - OS-aware (macOS / Arch / Fedora / Linux)
 - Conditional plugins (`command -v` gated)
 - XDG-based (`~/.config/zsh`)
-- Same config on every machine
 
 Repo: [github.com/aganet/zsh](https://github.com/aganet/zsh)
 
@@ -26,17 +26,6 @@ Repo: [github.com/aganet/zsh](https://github.com/aganet/zsh)
 ---
 
 ## Structure
-
-```text
-~/.zshenv
-~/.config/zsh/
-├── .zshrc
-├── pluginrc
-├── optionrc
-├── aliasrc
-├── local.zsh
-└── .p10k.zsh
-```
 
 - `pluginrc` → plugins
 - `optionrc` → shell options + history
