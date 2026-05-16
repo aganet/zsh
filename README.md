@@ -283,6 +283,11 @@ All in `aliasrc`, each block gated by `command -v <tool>`. Inspect the file for 
 
 ---
 
+## Credits
+
+Modular layout inspired by [radleylewis/dotfiles](https://github.com/radleylewis/dotfiles/tree/master/.config/zsh).
+
+
 ## License
 
 MIT License. Use it, tweak it, fork it.
