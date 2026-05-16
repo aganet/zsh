@@ -1,5 +1,7 @@
 # my zsh config
 
+**Repo:** [github.com/aganet/zsh](https://github.com/aganet/zsh) — the whole config lives there. Clone it, fork it, or copy whatever bits look useful. The rest of this post is what's in the repo plus how I actually use it day-to-day.
+
 This is the zsh setup I use on every machine — Arch at home, macOS when I'm on the laptop, Ubuntu, and whatever distro a work VM happens to be running. Same files, same aliases, same prompt everywhere.
 
 It's built on **Oh My Zsh + Powerlevel10k**, with modern CLI replacements wired in (`eza`, `bat`, `fd`, `zoxide`, `direnv`, `fzf-tab`) and a curated set of DevOps aliases for the tools I touch daily: `kubectl`, `docker`, `terraform`, `helm`, `kind`, `aws`, `az`, `uv`, `gh`.
