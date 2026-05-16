@@ -73,6 +73,22 @@ update() {
     brew update && brew upgrade && brew cleanup -s
   fi
 
+  # mise - install if missing, then upgrade runtimes (node, python, etc.)
+  if ! command -v mise &>/dev/null; then
+    print -P "%F{cyan}==>%f Installing mise"
+    if command -v brew &>/dev/null; then
+      brew install mise
+    else
+      curl -fsSL https://mise.run | sh
+      export PATH="$HOME/.local/bin:$PATH"
+    fi
+  fi
+  if command -v mise &>/dev/null; then
+    print -P "%F{cyan}==>%f mise runtimes"
+    mise self-update --no-plugins 2>/dev/null || true
+    mise upgrade
+  fi
+
   if [[ -d "$ZSH/.git" ]]; then
     print -P "%F{cyan}==>%f Oh My Zsh"
     (cd "$ZSH" && git pull --quiet --ff-only) && print -P "   updated."

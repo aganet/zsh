@@ -102,10 +102,9 @@ command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 # direnv (per-directory env vars via .envrc)
 command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
 
-# NVM
-export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+# mise - polyglot version manager (replaces nvm / pyenv / rbenv / asdf).
+# Activates in ~5 ms vs NVM's ~950 ms; auto-switches versions on cd.
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
 
 # Kubectl completion fallback (only if OMZ kubectl plugin didn't load it)
 if command -v kubectl &>/dev/null && [[ -z "${_comps[kubectl]}" ]]; then
@@ -164,3 +163,4 @@ fi
 # Host-local overrides (machine-specific tweaks)
 # ============================================================================
 [[ -f "$ZDOTDIR/local.zsh" ]] && source "$ZDOTDIR/local.zsh"
+eval "$(mise activate zsh)"
