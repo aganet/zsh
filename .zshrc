@@ -96,7 +96,7 @@ fi
 # Tool integrations
 # ============================================================================
 
-# Zoxide (replaces autojump)
+# Zoxide — smart `cd` with frecency-based jumping
 command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 
 # direnv (per-directory env vars via .envrc)

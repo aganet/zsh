@@ -33,7 +33,4 @@ command -v rbenv &>/dev/null && plugins+=(bundler rake rbenv ruby)
 # macOS-specific
 [[ "$CURRENT_OS" == "macos" ]] && plugins+=(macos brew)
 
-# Autojump only as fallback if zoxide is missing
-! command -v zoxide &>/dev/null && command -v autojump &>/dev/null && plugins+=(autojump)
-
 source "$ZSH/oh-my-zsh.sh"
