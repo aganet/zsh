@@ -2,10 +2,6 @@
 # Anything that depends on this specific machine, account, or work network
 # goes here so the shared .zshrc can stay clean and portable.
 
-# Arch system update
-alias update='sudo pacman -Sy --needed archlinux-keyring && yay -Syu --noconfirm'
-
-
 # Personal PATH additions (only if the dir exists)
 typeset -U path
 [[ -d "${KREW_ROOT:-$HOME/.krew}/bin" ]] && path=("${KREW_ROOT:-$HOME/.krew}/bin" $path)

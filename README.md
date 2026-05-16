@@ -1,40 +1,176 @@
-# my zsh config
+# My zsh config
 
-**Repo:** [github.com/aganet/zsh](https://github.com/aganet/zsh) — the whole config lives there. Clone it, fork it, or copy whatever bits look useful. The rest of this post is what's in the repo plus how I actually use it day-to-day.
+**Repo:** [github.com/aganet/zsh](https://github.com/aganet/zsh) — the whole config lives there. Clone it, fork it, copy whatever bits look useful.
 
-This is the zsh setup I use on every machine — Arch at home, macOS when I'm on the laptop, Ubuntu, and whatever distro a work VM happens to be running. Same files, same aliases, same prompt everywhere.
+This is the zsh setup I use on every machine — Arch at home, Fedora at work, macOS on the laptop, and whatever distro a work VM happens to be running. **Same config everywhere, adapting to what's installed.** The post below explains what's in it, why I made the choices I did, and how I actually use it day-to-day.
 
-It's built on **Oh My Zsh + Powerlevel10k**, with modern CLI replacements wired in (`eza`, `bat`, `fd`, `zoxide`, `direnv`, `fzf-tab`) and a curated set of DevOps aliases for the tools I touch daily: `kubectl`, `docker`, `terraform`, `helm`, `kind`, `aws`, `az`, `uv`, `gh`.
+It's built on **Oh My Zsh + Powerlevel10k**, with modern CLI replacements wired in (`eza`, `bat`, `fd`, `zoxide`, `direnv`, `fzf-tab`, `delta`) and a curated set of DevOps aliases for the tools I touch daily: `kubectl`, `docker`, `terraform`, `helm`, `kind`, `aws`, `az`, `uv`, `gh`.
 
 The config **auto-detects the OS** (macOS / Arch / Fedora / generic Linux) and only loads plugins for tools that are actually installed — so I can drop the same files on any box and they just work.
 
+## Performance
+
+Real numbers from `time zsh -i -c exit` (5 warm runs, median):
+
+| Host                            | Cold start | Warm start |
+|---------------------------------|-----------:|-----------:|
+| Fedora 44 laptop (this machine) |     ~3.9 s |     ~1.0 s |
+| Arch desktop                    |        TBD |        TBD |
+| macOS M-series                  |        TBD |        TBD |
+
+The big cost on Linux is NVM (~600 ms by itself) plus Oh My Zsh's plugin chain. If you don't run Node, drop `[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"` or swap in [`zsh-nvm`](https://github.com/lukechilds/zsh-nvm) to lazy-load it.
+
+To profile your own startup:
+
+```sh
+# rough total
+time zsh -i -c exit
+
+# per-function breakdown — add `zmodload zsh/zprof` near the top of .zshrc
+# and `zprof` at the very bottom, then start a new shell.
+```
+
+---
+
+## My principles
+
+A few rules I follow when adding anything to this repo. They keep the config small, fast, and portable.
+
+1. **One repo, one tool.** This repo is *only* zsh. Nvim, tmux, kitty, etc. live in their own repos under `~/.config/<tool>`. No monolithic dotfiles.
+2. **The same files on every machine.** No `if hostname == "x"` branches. Anything machine-specific lives in `local.zsh`, which is git-ignored.
+3. **Plugins are conditional.** `command -v <tool>` gates every alias and every plugin. No tool installed? No warnings — you just get fewer aliases.
+4. **No surprises in `$HOME`.** The only file in `~` is a one-liner `.zshenv` that points zsh at `$XDG_CONFIG_HOME/zsh`. Everything else stays under `~/.config/zsh/`.
+5. **Watch startup latency.** I profile with `zprof` when the shell feels slow and treat anything visibly noticeable (~50 ms in the table) as a candidate for lazy-loading or deletion. NVM is the usual offender.
+
+---
+
 ## Why I split it into four files
 
-It started as a single 200-line `.zshrc` that grew organically over years. Eventually it got unwieldy — adding a new alias meant scrolling past plugin configuration, history settings, and OS-detection logic.
+This started as a single 200-line `.zshrc` and slowly turned into a junk drawer. Adding a new alias meant scrolling past plugin configuration, history settings, and OS-detection logic. So I split it, inspired by [radleylewis/dotfiles](https://github.com/radleylewis/dotfiles/tree/master/.config/zsh):
 
-So I split it, inspired by [radleylewis/dotfiles](https://github.com/radleylewis/dotfiles/tree/master/.config/zsh):
+- `pluginrc` — OMZ + the plugin list (conditional on installed tools)
+- `optionrc` — `setopt` + history settings
+- `aliasrc` — every alias (general / modern CLI / DevOps)
+- `local.zsh` — host-specific bits I don't want in git
 
-- `pluginrc` for OMZ + the plugin list
-- `optionrc` for `setopt` + history
-- `aliasrc` for every alias (general / modern CLI / DevOps)
-- `local.zsh` for host-specific bits I don't want in git
-
-The main `.zshrc` is now just an orchestrator: prompt → OS detect → PATH → source the modules → tool integrations → p10k → host overrides.
-
-## Layout
+The main `.zshrc` is an orchestrator: prompt → OS detect → PATH → source the modules → tool integrations → p10k → host overrides. The split is for **human readability, not shell performance** — at runtime everything ends up in one shell with no measurable overhead.
 
 ```text
-~/.zshenv               # sets XDG_* + ZDOTDIR — only file in $HOME
+~/.zshenv               # sets XDG_* + ZDOTDIR — the only file in $HOME
 ~/.config/zsh/
 ├── .zshrc              # orchestrator: prompt, OS detect, PATH, tool integrations
-├── pluginrc            # OMZ + plugins=(…) (conditional on installed tools)
+├── pluginrc            # OMZ + plugins=(…)
 ├── optionrc            # setopt + history settings
-├── aliasrc             # all aliases (general + modern CLI + DevOps)
-├── local.zsh           # host-specific (Arch update alias, work SSH, …)
+├── aliasrc             # all aliases
+├── local.zsh           # host-specific (git-ignored)
 └── .p10k.zsh           # Powerlevel10k theme (created by `p10k configure`)
 ```
 
-Load order: `pluginrc` → `optionrc` → `aliasrc` → tool integrations → p10k → `local.zsh`. Plugins must load first so `compdef` calls in `aliasrc` (e.g. `compdef __start_kubectl k`) resolve.
+Load order: `pluginrc` → `optionrc` → `aliasrc` → tool integrations → p10k → `local.zsh`. Plugins must load first so `compdef` calls in `aliasrc` (e.g. `compdef __start_kubectl k`) resolve against an already-initialized completion system.
+
+---
+
+## What I removed (and why)
+
+### Atuin
+
+I ran [atuin](https://github.com/atuinsh/atuin) for a while. It's a great tool — encrypted, syncable shell history with a TUI search. But:
+
+- I never used the sync feature, and I didn't love an external SQLite database holding every command I'd ever typed.
+- Its `precmd` / `preexec` hooks fired on every prompt, adding a small but noticeable latency.
+- When I tried to uninstall it, leftover hooks lived on in already-open shells until I `exec zsh`'d. That's not atuin's fault — that's how zsh hooks work — but it nudged me toward keeping fewer "magical" components.
+
+I went back to zsh-native history (`HISTFILE` + `share_history` + `hist_ignore_dups`) and let the OMZ `fzf` plugin handle `Ctrl-R`. Same fuzzy-search experience, zero background daemons, no extra database.
+
+### `zsh-vi-mode`
+
+I edit in vim/neovim — but at the shell prompt I want emacs keybindings (`Ctrl-A`, `Ctrl-E`, `Ctrl-W`). Different muscle memory for different contexts.
+
+### `starship`
+
+I tried it. Powerlevel10k's *instant prompt* feature is too good — the shell becomes interactive while p10k computes the right-hand side asynchronously. With starship I could feel the lag.
+
+---
+
+## How I actually use it (day-to-day workflows)
+
+### Switching Kubernetes contexts
+
+```sh
+s                                  # opens fzf picker over all kubeconfigs
+                                   # (powered by gardener/kubeswitch)
+kctx prod && kns api               # OR explicit: kubectx + kubens
+k get pods -A                      # k = kubectl
+kev                                # what just happened in this namespace?
+ks 'web-.*'                        # tail logs from all web-* pods (stern)
+```
+
+### Quick repo nav
+
+```sh
+z api                              # jump to ~/work/api from anywhere
+z work api                         # AND-match multiple terms
+zi                                 # fzf picker over zoxide history
+```
+
+I almost never type `cd` anymore. Once a path is in my zoxide DB, two letters are enough.
+
+### Picking a file to edit
+
+```sh
+nvim $(fzf)                        # or: <Ctrl-T> at the prompt
+```
+
+`<Ctrl-T>` inserts a fzf-picked path right at the cursor, with bat-powered preview. Great for `nvim <Ctrl-T>`, `git add <Ctrl-T>`, `cp <Ctrl-T> .`.
+
+### Project-specific env
+
+```sh
+cd ~/work/api
+echo 'export AWS_PROFILE=work-dev' > .envrc
+echo 'export KUBECONFIG=$PWD/kubeconfig.yaml' >> .envrc
+direnv allow                       # one-time approval
+```
+
+Now any time I `cd ~/work/api`, my AWS profile and KUBECONFIG are scoped to that project. Leave the directory → they're unset.
+
+### Git diff / PR workflow
+
+```sh
+git diff                           # side-by-side, syntax-highlighted (delta)
+lazygit                            # TUI for staging hunks, rebasing, etc.
+ghpr                               # opens PR creation page in browser
+ghprs                              # PRs that need my review
+ghprco 1234                        # check out PR #1234 locally
+```
+
+I do roughly 80% of my git via `lazygit` + `gh` aliases now. Plain `git` only when I need a script-friendly invocation.
+
+### Quick docker stack
+
+```sh
+dcu && dcl                         # docker compose up -d, then tail logs
+dex web bash                       # shell into the "web" container
+dprune                             # cleanup unused images/containers/volumes
+```
+
+### Python project from scratch
+
+```sh
+uvenv && uva fastapi httpx         # new .venv, add deps to pyproject.toml
+uvr main.py                        # run with project deps
+uvx ruff check .                   # run ruff one-shot without installing it
+```
+
+`uv` replaced pip, venv, pyenv, and poetry in my workflow. Single binary, ~10× faster than pip.
+
+### Cluster debugging from inside
+
+```sh
+kdebug                             # ephemeral netshoot pod with curl/dig/tcpdump
+```
+
+Useful when I need to verify DNS, hit a service from inside the cluster mesh, or check if a NetworkPolicy is doing what I expect.
 
 ---
 
@@ -48,10 +184,16 @@ Load order: `pluginrc` → `optionrc` → `aliasrc` → tool integrations → p1
 
 ```bash
 git clone https://github.com/aganet/zsh.git ~/.config/zsh
-echo 'export ZDOTDIR="$HOME/.config/zsh"' > ~/.zshenv
+
+# Append the ZDOTDIR line only if it's not already there — never overwrite.
+touch ~/.zshenv
+grep -qxF 'export ZDOTDIR="$HOME/.config/zsh"' ~/.zshenv || \
+  echo 'export ZDOTDIR="$HOME/.config/zsh"' >> ~/.zshenv
 ```
 
-That's the only file that lives in `$HOME` — everything else is under `~/.config/zsh/`.
+> If you already have an `~/.zshenv` doing other things, the snippet above appends safely instead of clobbering it. Just `cat ~/.zshenv` afterwards to confirm.
+
+That `~/.zshenv` is the only file that lives in `$HOME` — everything else is under `~/.config/zsh/`.
 
 ### 2. Oh My Zsh + Powerlevel10k + custom plugins
 
@@ -72,13 +214,17 @@ git clone --depth=1 https://github.com/Aloxaf/fzf-tab                         "$
 
 ### 3. CLI tools (Homebrew everywhere)
 
-Same brew commands work on macOS, Arch, Ubuntu/Debian, Fedora, and WSL. On Linux, install Homebrew first:
+I standardize on **Homebrew across every machine** — including Linux — so the same `brew install …` line bootstraps a new box in one shot. It's a deliberate tradeoff: one command, identical versions across hosts, no per-distro package name juggling. The cost is an extra package manager on Linux and ~30 ms of startup time from `brew shellenv`.
+
+**If you prefer your native package manager**, install equivalent packages via `pacman` / `dnf` / `apt` — every alias in `aliasrc` is `command -v`-gated, so it doesn't matter where the binary came from.
+
+On Linux, install Homebrew first:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/main/install.sh)"
 ```
 
-The `.zshrc` runs `brew shellenv` automatically, so you don't need to edit `~/.profile`.
+The `.zshrc` runs `eval "$(brew shellenv)"` automatically (guarded by `command -v brew`), so you don't need to touch `~/.profile`.
 
 ```bash
 # Core CLI + DevOps + Go/Ruby version manager — single brew call
@@ -91,7 +237,7 @@ brew install \
 # fzf keybindings (one-time, after fzf is installed)
 $(brew --prefix)/opt/fzf/install --key-bindings --completion --no-update-rc
 
-# Python (uv) — official installer (or `brew install uv`, or `sudo pacman -S uv`)
+# Python (uv) — official installer (or `brew install uv`)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Node (NVM) — official installer (the .zshrc expects $NVM_DIR at $HOME/.nvm)
@@ -101,8 +247,16 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 **Docker** is the one thing brew can't fully install on Linux (it doesn't manage the daemon):
 
 - **macOS** — `brew install --cask docker` (Docker Desktop) or `brew install colima && colima start`
-- **Arch** — `sudo pacman -S docker docker-compose && sudo systemctl enable --now docker`
-- **Ubuntu / Debian / Fedora** — follow [docker.com/engine/install](https://docs.docker.com/engine/install/)
+- **Arch** — `sudo pacman -S docker docker-buildx docker-compose && sudo systemctl enable --now docker` (the `docker-compose` package on Arch ships Compose v2 as a Docker CLI plugin, so `docker compose …` Just Works)
+- **Ubuntu / Debian / Fedora** — follow [docker.com/engine/install](https://docs.docker.com/engine/install/) — the official repo ships Compose v2 as `docker-compose-plugin`
+
+**Gardener `switcher`** (for the `s` alias / k8s context fuzzy picker) — install directly from GitHub; the build in some distros is too old to support shell integration:
+
+```bash
+sudo curl -L -o /usr/local/bin/switcher \
+  https://github.com/danielfoehrKn/kubeswitch/releases/latest/download/switcher_linux_amd64
+sudo chmod +x /usr/local/bin/switcher
+```
 
 Missing tools degrade gracefully — every alias in `aliasrc` is `command -v`-gated.
 
@@ -136,6 +290,7 @@ git config --global merge.conflictstyle "zdiff3"
 | `Ctrl-R`                    | Fuzzy history search                                |
 | `<TAB>`                     | fzf-powered completion menu with bat/eza previews   |
 | `z <name>` / `zi`           | Jump to dir via zoxide / interactive picker         |
+| `s`                         | Kubeconfig context picker (kubeswitch)              |
 | `git diff` / `lazygit`      | Delta-colored diff / git TUI                        |
 | `tldr <cmd>`                | Quick examples (e.g. `tldr tar`)                    |
 | `btop`                      | System monitor                                      |
@@ -163,6 +318,7 @@ All in `aliasrc`, each block gated by `command -v <tool>` so missing tools are s
 | `kns`    | `kubens` — switch namespace                                   |
 | `ks`     | `stern` — multi-pod log tail                                  |
 | `k9`     | `k9s` — cluster TUI                                           |
+| `s`      | `switcher` (kubeswitch) — fuzzy context picker                |
 | `kindc`  | `kind create cluster`                                         |
 | `kindd`  | `kind delete cluster`                                         |
 | `kindg`  | `kind get clusters`                                           |
@@ -349,7 +505,7 @@ la                          # + dotfiles
 tree -L 2                   # tree, two levels deep
 eza -lh --total-size        # real directory sizes
 eza -l --sort=size -r       # biggest files first
-\ls                          # escape the alias
+\ls                         # escape the alias
 ```
 
 ### `bat` (replaces `cat`)
@@ -415,18 +571,29 @@ nvm alias default 20
 
 ---
 
-## Troubleshooting
+## Troubleshooting (from my own scars)
 
-- **Garbled prompt / boxes** — install a Nerd Font and configure your terminal to use it.
-- **fzf-tab inactive** — must come *before* `zsh-autosuggestions` and `fast-syntax-highlighting` in `plugins=(…)`. Already correct in `pluginrc`.
-- **`compinit: insecure directories`** — `compaudit | xargs chmod g-w,o-w`.
-- **Slow startup** — profile with `zsh -xv 2>&1 | head -50`. NVM is usually the culprit; see [lazy-nvm](https://github.com/lukechilds/zsh-nvm).
-- **Per-OS plugin not loading** — check `echo $CURRENT_OS` (`arch` / `fedora` / `linux` / `macos`) matches what you expect.
+These are the issues I've actually hit on this setup, and what fixed them.
+
+- **Garbled prompt / boxes** — install a Nerd Font and configure your terminal to use it. p10k icons are in the font, not in zsh.
+- **fzf-tab inactive** — `fzf-tab` (and any completion-shaping plugin) needs to load **before** `fast-syntax-highlighting`, which should generally be the last plugin in the list because it wraps widgets. `pluginrc` already has the right order; worth double-checking after manual edits.
+- **`compinit: insecure directories`** — `compaudit | xargs chmod g-w,o-w`. Usually happens after a fresh OMZ install on a system with default group-writable home dirs.
+- **Slow startup** — `zsh -xv 2>&1 | head -50` shows *load order* but not timing. For actual numbers use `time zsh -i -c exit` for a total, or `zmodload zsh/zprof` at the top + `zprof` at the bottom of `.zshrc` for a per-function breakdown. NVM is frequently the biggest offender; `kubectl completion`, heavy OMZ plugin chains, and `brew shellenv` are runners-up. See the [Performance](#performance) section for my numbers.
+- **Per-OS plugin not loading** — check `echo $CURRENT_OS` (`arch` / `fedora` / `linux` / `macos`) matches what you expect. I detect via `/etc/arch-release`, `/etc/fedora-release`, and `uname -s`.
+- **`Error: context with name "init" not found` on shell startup** — your `switcher` (kubeswitch) binary is too old to support shell integration. Upgrade it (see the install section) — `source <(switcher init zsh)` only works on v0.10+.
+- **Leftover hooks from an uninstalled tool** — if you remove something like atuin from `.zshrc` but the hook still fires, it's because the running shell has the function in memory. `exec zsh` resets it.
 
 ---
 
-## Not in this config (on purpose)
+## Not included
 
-- **No `atuin`** — sticking with zsh-native history + fzf's `Ctrl-R`.
-- **No `zsh-vi-mode`** — emacs-style line editing only.
-- **No `starship`** — Powerlevel10k already handles the prompt.
+- `atuin` — native history + fzf's `Ctrl-R` is enough for me ([why](#atuin))
+- `zsh-vi-mode` — emacs at the prompt, vim in the editor
+- `starship` — p10k's instant prompt is faster
+- `local.zsh` synced across machines — host-specific stuff is supposed to be host-specific
+
+---
+
+## License
+
+MIT — take what you like, leave what you don't.
