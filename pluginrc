@@ -1,0 +1,39 @@
+# ============================================================================
+# Oh My Zsh & plugins — sourced from .zshrc
+# ============================================================================
+export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# Base plugins (all platforms)
+# NOTE: fzf-tab must come before zsh-autosuggestions and fast-syntax-highlighting
+plugins=(
+  git
+  fzf
+  fzf-tab
+  dotenv
+  vscode
+  cp
+  colorize
+  encode64
+  zsh-autosuggestions
+  fast-syntax-highlighting
+)
+
+# DevOps tools — only load if the binary is on $PATH
+command -v docker    &>/dev/null && plugins+=(docker docker-compose)
+command -v kubectl   &>/dev/null && plugins+=(kubectl)
+command -v helm      &>/dev/null && plugins+=(helm)
+command -v terraform &>/dev/null && plugins+=(terraform)
+command -v aws       &>/dev/null && plugins+=(aws)
+command -v az        &>/dev/null && plugins+=(azure)
+
+# Ruby toolchain
+command -v rbenv &>/dev/null && plugins+=(bundler rake rbenv ruby)
+
+# macOS-specific
+[[ "$CURRENT_OS" == "macos" ]] && plugins+=(macos brew)
+
+# Autojump only as fallback if zoxide is missing
+! command -v zoxide &>/dev/null && command -v autojump &>/dev/null && plugins+=(autojump)
+
+source "$ZSH/oh-my-zsh.sh"

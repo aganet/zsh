@@ -1,0 +1,179 @@
+# ============================================================================
+# Aliases — sourced from .zshrc (after OMZ has loaded)
+# ============================================================================
+
+# -- General -----------------------------------------------------------------
+alias -- -='cd -'             # `-` jumps to the previous directory
+alias df='df -h'              # human-readable sizes
+alias free='free -m'          # MB instead of bytes
+alias path='echo -e ${PATH//:/\\n}'   # print PATH one entry per line
+alias reload='exec zsh'       # reload the shell
+
+# -- Editor ------------------------------------------------------------------
+if command -v nvim &>/dev/null; then
+  alias vim='nvim'
+  alias vi='nvim'
+fi
+
+# -- Modern CLI replacements -------------------------------------------------
+if command -v eza &>/dev/null; then
+  alias ls='eza --icons --group-directories-first'
+  alias ll='eza -lh --icons --git --group-directories-first'
+  alias la='eza -lah --icons --git --group-directories-first'
+  alias tree='eza --tree --icons'
+else
+  case "$CURRENT_OS" in
+    macos)             alias ls='ls -G' ;;
+    arch|fedora|linux) alias ls='ls --color=auto' ;;
+  esac
+fi
+command -v bat &>/dev/null && alias cat='bat --paging=never'
+command -v rg  &>/dev/null && alias grep='rg --color=auto'
+
+# -- OS-specific -------------------------------------------------------------
+case "$CURRENT_OS" in
+  macos)
+    alias flush='dscacheutil -flushcache && sudo killall -HUP mDNSResponder'
+    ;;
+  arch|fedora|linux)
+    alias open='xdg-open'
+    ;;
+esac
+
+# ============================================================================
+# DevOps aliases
+# Each block is guarded by `command -v` so missing tools are silent no-ops.
+# OMZ kubectl / docker-compose / terraform / helm / aws plugins already
+# provide a large alias set; the entries below are extras / convenience
+# wrappers that aren't covered there.
+# ============================================================================
+
+# -- Kubernetes (kubectl) ----------------------------------------------------
+if command -v kubectl &>/dev/null; then
+  alias k='kubectl'
+  compdef __start_kubectl k
+
+  # Things OMZ's kubectl plugin doesn't include or only partially covers
+  alias kpf='kubectl port-forward'
+  alias kev='kubectl get events --sort-by=.lastTimestamp'
+  alias kaa='kubectl get all --all-namespaces'
+  alias ktop='kubectl top'
+  alias kapi='kubectl api-resources'
+
+  # Ephemeral netshoot pod for in-cluster network debugging
+  alias kdebug='kubectl run debug-$RANDOM --rm -it --image=nicolaka/netshoot --restart=Never --'
+fi
+
+# kubectx / kubens (separate binaries — often installed via krew)
+command -v kubectx &>/dev/null && alias kctx='kubectx'
+command -v kubens  &>/dev/null && alias kns='kubens'
+command -v stern   &>/dev/null && alias ks='stern'           # multi-pod log tail
+command -v k9s     &>/dev/null && alias k9='k9s'             # cluster TUI
+
+# kind (Kubernetes IN Docker — preferred local dev cluster)
+if command -v kind &>/dev/null; then
+  alias kindc='kind create cluster'         # default cluster, name "kind"
+  alias kindd='kind delete cluster'         # delete current cluster
+  alias kindg='kind get clusters'           # list clusters
+  alias kindl='kind load docker-image'      # load local image into cluster
+fi
+
+# -- Docker ------------------------------------------------------------------
+if command -v docker &>/dev/null; then
+  alias d='docker'
+  alias dps='docker ps'
+  alias dpsa='docker ps -a'
+  alias di='docker images'
+  alias dex='docker exec -it'
+  alias dlog='docker logs -f'
+  alias drun='docker run --rm -it'
+  alias dstats='docker stats'
+  alias dprune='docker system prune -af --volumes'
+  alias dip="docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"
+fi
+
+# Docker Compose v2 (the modern `docker compose` form — space, no hyphen)
+if docker compose version &>/dev/null 2>&1; then
+  alias dc='docker compose'
+  alias dcu='docker compose up -d'
+  alias dcd='docker compose down'
+  alias dcl='docker compose logs -f'
+  alias dcps='docker compose ps'
+  alias dcb='docker compose build'
+  alias dcr='docker compose restart'
+fi
+
+# -- Terraform / OpenTofu ----------------------------------------------------
+if command -v terraform &>/dev/null; then
+  alias tf='terraform'
+  alias tfi='terraform init'
+  alias tfp='terraform plan'
+  alias tfa='terraform apply'
+  alias tfaa='terraform apply -auto-approve'
+  alias tfd='terraform destroy'
+  alias tfo='terraform output'
+  alias tfs='terraform state'
+  alias tff='terraform fmt -recursive'
+  alias tfv='terraform validate'
+  alias tfw='terraform workspace'
+fi
+command -v tofu &>/dev/null && alias to='tofu'
+
+# -- Helm --------------------------------------------------------------------
+if command -v helm &>/dev/null; then
+  alias h='helm'
+  alias hls='helm list'
+  alias hla='helm list --all-namespaces'
+  alias hi='helm install'
+  alias hu='helm uninstall'
+  alias hup='helm upgrade --install'
+  alias hr='helm repo'
+  alias ht='helm template'
+fi
+
+# -- AWS ---------------------------------------------------------------------
+if command -v aws &>/dev/null; then
+  alias awsw='aws sts get-caller-identity'        # who am I?
+  alias awsl='aws sso login'
+  alias awsr='aws configure list-profiles'
+fi
+
+# -- Azure -------------------------------------------------------------------
+if command -v az &>/dev/null; then
+  alias azl='az login'
+  alias azlo='az logout'
+  alias azw='az account show'                     # who am I? (current sub)
+  alias azacc='az account list --output table'    # all subscriptions
+  alias azset='az account set --subscription'     # azset <sub-name-or-id>
+  alias azg='az group list --output table'        # resource groups
+  alias azaks='az aks get-credentials'            # azaks -g <rg> -n <cluster>
+fi
+
+# -- Python (uv) -------------------------------------------------------------
+if command -v uv &>/dev/null; then
+  alias uvi='uv pip install'        # install into the active venv
+  alias uvr='uv run'                # run a script with deps resolved
+  alias uvs='uv sync'               # sync project deps from pyproject/uv.lock
+  alias uva='uv add'                # add a dep to pyproject.toml
+  alias uvrm='uv remove'            # remove a dep from pyproject.toml
+  alias uvenv='uv venv'             # create .venv in current dir
+  alias uvpy='uv python install'    # install a CPython version managed by uv
+  alias uvx='uvx'                   # one-shot tool runner (ships with uv)
+fi
+
+# -- Git extras (OMZ git plugin already covers gs/gco/gp/glo/etc.) -----------
+alias gpr='git pull --rebase'
+# Delete local branches whose remote tracking branch is gone
+alias gprune='git fetch --prune && git branch -vv | awk "/: gone]/{print \$1}" | xargs -r git branch -D'
+
+# -- Networking & system -----------------------------------------------------
+alias myip='curl -s https://api.ipify.org && echo'
+alias localip="ip -4 addr show 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1"
+alias ports='ss -tulpn 2>/dev/null || netstat -tulpn'
+alias listening='ss -tlpn 2>/dev/null || netstat -tlpn'
+alias weather='curl -s "https://wttr.in/?format=3"'
+
+# -- Process helpers ---------------------------------------------------------
+alias psg='ps aux | grep -v grep | grep -i'      # fuzzy ps search
+alias mem='ps aux --sort=-%mem | head -n 11'     # top 10 memory consumers
+alias cpu='ps aux --sort=-%cpu | head -n 11'     # top 10 cpu consumers

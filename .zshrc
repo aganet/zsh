@@ -14,7 +14,7 @@ export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
 
 # ============================================================================
-# OS Detection
+# OS Detection (consumed by pluginrc / aliasrc / PATH / FZF setup)
 # ============================================================================
 case "$(uname -s)" in
   Linux)
@@ -69,124 +69,31 @@ fi
 export PATH
 
 # ============================================================================
-# Oh My Zsh & Plugins
+# Modular config — split into three files
+#   pluginrc → Oh My Zsh + plugin list (loads OMZ, must come first)
+#   optionrc → setopt + history settings
+#   aliasrc  → all aliases incl. devops shortcuts (after OMZ so compdef works)
 # ============================================================================
-export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
-ZSH_THEME="powerlevel10k/powerlevel10k"
-
-# Base plugins (all platforms)
-# NOTE: fzf-tab must come before zsh-autosuggestions and fast-syntax-highlighting
-plugins=(
-  git
-  fzf
-  fzf-tab
-  dotenv
-  vscode
-  cp
-  colorize
-  encode64
-  zsh-autosuggestions
-  fast-syntax-highlighting
-)
-
-# Container tools (only if installed)
-command -v docker &>/dev/null && plugins+=(docker docker-compose)
-command -v kubectl &>/dev/null && plugins+=(kubectl)
-command -v minikube &>/dev/null && plugins+=(minikube)
-
-# Ruby (only if rbenv is installed)
-command -v rbenv &>/dev/null && plugins+=(bundler rake rbenv ruby)
-
-# macOS-specific
-[[ "$CURRENT_OS" == "macos" ]] && plugins+=(macos brew)
-
-# Autojump only as fallback if zoxide is missing
-! command -v zoxide &>/dev/null && command -v autojump &>/dev/null && plugins+=(autojump)
-
-source "$ZSH/oh-my-zsh.sh"
+[ -f "$ZDOTDIR/pluginrc" ] && source "$ZDOTDIR/pluginrc"
+[ -f "$ZDOTDIR/optionrc" ] && source "$ZDOTDIR/optionrc"
+[ -f "$ZDOTDIR/aliasrc"  ] && source "$ZDOTDIR/aliasrc"
 
 # ============================================================================
-# History
-# ============================================================================
-HISTFILE="$XDG_DATA_HOME/zsh/.zhistory"
-SAVEHIST=1000000
-HISTSIZE=1000000
-[[ -d "${HISTFILE:h}" ]] || mkdir -p "${HISTFILE:h}"
-setopt share_history
-setopt hist_expire_dups_first
-setopt hist_ignore_dups
-setopt hist_ignore_space
-setopt hist_verify
-
-# ============================================================================
-# Shell Options
-# ============================================================================
-setopt correct           # autocorrect command typos
-setopt autocd            # cd by typing directory name
-setopt extendedglob      # extended globbing patterns
-setopt nocaseglob        # case-insensitive globbing
-setopt numericglobsort   # sort file1 file2 file10 correctly
-setopt rcexpandparam     # array expansion with params
-setopt nocheckjobs       # don't warn about running jobs on exit
-setopt nobeep            # no terminal beep
-
-# Auto-pick up new executables in PATH without restart
-zstyle ':completion:*' rehash true
-
-# GPG agent
-export GPG_TTY=$(tty)
-
-# ============================================================================
-# Editor & Pagers
+# Editor & MANPAGER (env vars — matching aliases live in aliasrc)
 # ============================================================================
 if command -v nvim &>/dev/null; then
   export EDITOR="nvim"
-  alias vim=nvim
-  alias vi=nvim
 elif command -v vim &>/dev/null; then
   export EDITOR="vim"
 fi
 
-# Use bat as the manpage pager (colorized, syntax-highlighted)
+# bat as the manpage pager (colorized, syntax-highlighted)
 if command -v bat &>/dev/null; then
   export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 fi
 
 # ============================================================================
-# Aliases
-# ============================================================================
-if command -v kubectl &>/dev/null; then
-  alias k=kubectl
-  compdef __start_kubectl k
-fi
-
-case "$CURRENT_OS" in
-  macos)
-    alias flush="dscacheutil -flushcache && sudo killall -HUP mDNSResponder"
-    ;;
-  arch|fedora|linux)
-    alias open="xdg-open"
-    ;;
-esac
-
-# eza replaces ls (icons, git status, color)
-if command -v eza &>/dev/null; then
-  alias ls='eza --icons --group-directories-first'
-  alias ll='eza -lh --icons --git --group-directories-first'
-  alias la='eza -lah --icons --git --group-directories-first'
-  alias tree='eza --tree --icons'
-else
-  case "$CURRENT_OS" in
-    macos)        alias ls="ls -G" ;;
-    arch|fedora|linux) alias ls="ls --color=auto" ;;
-  esac
-fi
-
-# bat replaces cat (syntax highlighting); keep raw cat available as `\cat`
-command -v bat &>/dev/null && alias cat='bat --paging=never'
-
-# ============================================================================
-# Tools
+# Tool integrations
 # ============================================================================
 
 # Zoxide (replaces autojump)
@@ -200,12 +107,12 @@ export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-# Kubectl completion (if not already loaded by plugin)
+# Kubectl completion fallback (only if OMZ kubectl plugin didn't load it)
 if command -v kubectl &>/dev/null && [[ -z "${_comps[kubectl]}" ]]; then
   source <(kubectl completion zsh)
 fi
 
-# FZF (platform-aware paths)
+# FZF — platform-aware install paths
 case "$CURRENT_OS" in
   arch)
     [ -f /usr/share/fzf/key-bindings.zsh ] && source /usr/share/fzf/key-bindings.zsh
@@ -252,3 +159,8 @@ fi
 # ============================================================================
 [[ -f "$ZDOTDIR/.p10k.zsh" ]] && source "$ZDOTDIR/.p10k.zsh" || \
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
+
+# ============================================================================
+# Host-local overrides (machine-specific tweaks)
+# ============================================================================
+[[ -f "$ZDOTDIR/local.zsh" ]] && source "$ZDOTDIR/local.zsh"
