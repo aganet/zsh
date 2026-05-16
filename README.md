@@ -2,23 +2,38 @@
 
 **Repo:** [github.com/aganet/zsh](https://github.com/aganet/zsh) — the whole config lives there. Clone it, fork it, copy whatever bits look useful.
 
-This is the zsh setup I use on every machine — Arch at home, Fedora at work, macOS on the laptop, and whatever distro a work VM happens to be running. **Same config everywhere, adapting to what's installed.** The post below explains what's in it, why I made the choices I did, and how I actually use it day-to-day.
+This is the zsh setup I use on every machine — Arch at home, Fedora at work, macOS on the laptop, and whatever distro a work VM happens to be running. **Same config everywhere — features adapt to what's installed.** The post below explains what's in it, why I made the choices I did, and how I actually use it day-to-day.
 
 It's built on **Oh My Zsh + Powerlevel10k**, with modern CLI replacements wired in (`eza`, `bat`, `fd`, `zoxide`, `direnv`, `fzf-tab`, `delta`) and a curated set of DevOps aliases for the tools I touch daily: `kubectl`, `docker`, `terraform`, `helm`, `kind`, `aws`, `az`, `uv`, `gh`.
 
 The config **auto-detects the OS** (macOS / Arch / Fedora / generic Linux) and only loads plugins for tools that are actually installed — so I can drop the same files on any box and they just work.
 
+## What it looks like
+
+A few highlights of what you actually get day-to-day:
+
+- **Powerlevel10k prompt** with git status, current k8s context+namespace, and command runtime — async, so the prompt is interactive instantly.
+- **`<TAB>` becomes an fzf picker** with bat/eza-powered previews. `cd <Tab>` shows directory contents; `git checkout <Tab>` shows the last commit on each branch.
+- **`delta` for git diffs** — side-by-side, syntax-highlighted. Paired with `lazygit` for staging hunks and rebasing.
+- **`s` opens a fuzzy kubeconfig picker** (kubeswitch) for jumping between clusters in one keypress.
+- **`z <name>`** jumps to any directory you've visited before, ranked by frecency.
+
+> Screenshots/GIFs go here once I record them — drop `docs/img/prompt.png`, `docs/img/fzf-tab.gif`, `docs/img/delta.png`, `docs/img/kubeswitch.gif` and they'll auto-render. [asciinema](https://asciinema.org/) + [agg](https://github.com/asciinema/agg) is the easiest terminal-recording path.
+
 ## Performance
 
-Real numbers from `time zsh -i -c exit` (5 warm runs, median):
+Real numbers from `time zsh -i -c exit` on Fedora 44 (5 warm runs, median):
 
-| Host                            | Cold start | Warm start |
-|---------------------------------|-----------:|-----------:|
-| Fedora 44 laptop (this machine) |     ~3.9 s |     ~1.0 s |
-| Arch desktop                    |        TBD |        TBD |
-| macOS M-series                  |        TBD |        TBD |
+| Configuration              | Warm start |
+|----------------------------|-----------:|
+| Full config (NVM included) |    ~1.60 s |
+| Same config, NVM disabled  |    ~0.65 s |
 
-The big cost on Linux is NVM (~600 ms by itself) plus Oh My Zsh's plugin chain. If you don't run Node, drop `[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"` or swap in [`zsh-nvm`](https://github.com/lukechilds/zsh-nvm) to lazy-load it.
+The full config loads Oh My Zsh + a dozen plugins, Powerlevel10k, NVM, `kubectl completion`, `brew shellenv`, `direnv hook`, `zoxide init`, fzf keybindings, and the kubeswitch shell integration. NVM alone accounts for ~950 ms of that — it's a known offender that shells out to nvm.sh on every startup. A stripped-down shell without NVM lands around **~650 ms**, which is the more honest comparison number for "just my prompt + plugins."
+
+If you don't run Node, comment out the NVM block in `.zshrc`. If you do, swap to [`zsh-nvm`](https://github.com/lukechilds/zsh-nvm) for lazy-loading — it drops NVM's cost to ~5 ms by deferring `nvm.sh` until you actually type `nvm`/`node`/`npm`.
+
+Other hosts will be filled in once I've measured them: Arch desktop, macOS M-series.
 
 To profile your own startup:
 
@@ -36,11 +51,11 @@ time zsh -i -c exit
 
 A few rules I follow when adding anything to this repo. They keep the config small, fast, and portable.
 
-1. **One repo, one tool.** This repo is *only* zsh. Nvim, tmux, kitty, etc. live in their own repos under `~/.config/<tool>`. No monolithic dotfiles.
+1. **One repo per tool, not minimalism.** This repo is *only* zsh. Nvim, tmux, kitty, etc. live in their own repos under `~/.config/<tool>`. I prefer composable configs over one giant dotfiles repo — fewer merge conflicts, easier to share a single piece without dragging in everything else.
 2. **The same files on every machine.** No `if hostname == "x"` branches. Anything machine-specific lives in `local.zsh`, which is git-ignored.
 3. **Plugins are conditional.** `command -v <tool>` gates every alias and every plugin. No tool installed? No warnings — you just get fewer aliases.
 4. **No surprises in `$HOME`.** The only file in `~` is a one-liner `.zshenv` that points zsh at `$XDG_CONFIG_HOME/zsh`. Everything else stays under `~/.config/zsh/`.
-5. **Watch startup latency.** I profile with `zprof` when the shell feels slow and treat anything visibly noticeable (~50 ms in the table) as a candidate for lazy-loading or deletion. NVM is the usual offender.
+5. **Watch startup latency.** I profile with `zprof` when the shell feels slow and treat anything that adds more than ~50 ms of startup time as a candidate for lazy-loading or deletion. NVM is the usual offender — see [Performance](#performance) for real numbers.
 
 ---
 
@@ -162,7 +177,7 @@ uvr main.py                        # run with project deps
 uvx ruff check .                   # run ruff one-shot without installing it
 ```
 
-`uv` replaced pip, venv, pyenv, and poetry in my workflow. Single binary, ~10× faster than pip.
+`uv` replaced the parts of pip, venv, pyenv, and poetry I actually used. Single binary, ~10× faster than pip — not full feature parity with each, but more than enough for my workflow.
 
 ### Cluster debugging from inside
 
@@ -214,9 +229,9 @@ git clone --depth=1 https://github.com/Aloxaf/fzf-tab                         "$
 
 ### 3. CLI tools (Homebrew everywhere)
 
-I standardize on **Homebrew across every machine** — including Linux — so the same `brew install …` line bootstraps a new box in one shot. It's a deliberate tradeoff: one command, identical versions across hosts, no per-distro package name juggling. The cost is an extra package manager on Linux and ~30 ms of startup time from `brew shellenv`.
+I standardize on **Homebrew across every machine** — including Linux — so the same `brew install …` line bootstraps a new box in one shot. One command, identical versions across hosts, no per-distro package-name juggling. The cost is an extra package manager on Linux and ~30 ms of startup from `brew shellenv`.
 
-**If you prefer your native package manager**, install equivalent packages via `pacman` / `dnf` / `apt` — every alias in `aliasrc` is `command -v`-gated, so it doesn't matter where the binary came from.
+Prefer native package managers? Install equivalent binaries via `pacman`, `dnf`, or `apt`. Everything is `command -v`-gated, so package source doesn't matter.
 
 On Linux, install Homebrew first:
 
@@ -577,7 +592,7 @@ These are the issues I've actually hit on this setup, and what fixed them.
 
 - **Garbled prompt / boxes** — install a Nerd Font and configure your terminal to use it. p10k icons are in the font, not in zsh.
 - **fzf-tab inactive** — `fzf-tab` (and any completion-shaping plugin) needs to load **before** `fast-syntax-highlighting`, which should generally be the last plugin in the list because it wraps widgets. `pluginrc` already has the right order; worth double-checking after manual edits.
-- **`compinit: insecure directories`** — `compaudit | xargs chmod g-w,o-w`. Usually happens after a fresh OMZ install on a system with default group-writable home dirs.
+- **`compinit: insecure directories`** — `compaudit | xargs -I{} chmod g-w,o-w "{}"`. The `-I{}` form survives paths with spaces. Usually happens after a fresh OMZ install on a system with default group-writable home dirs.
 - **Slow startup** — `zsh -xv 2>&1 | head -50` shows *load order* but not timing. For actual numbers use `time zsh -i -c exit` for a total, or `zmodload zsh/zprof` at the top + `zprof` at the bottom of `.zshrc` for a per-function breakdown. NVM is frequently the biggest offender; `kubectl completion`, heavy OMZ plugin chains, and `brew shellenv` are runners-up. See the [Performance](#performance) section for my numbers.
 - **Per-OS plugin not loading** — check `echo $CURRENT_OS` (`arch` / `fedora` / `linux` / `macos`) matches what you expect. I detect via `/etc/arch-release`, `/etc/fedora-release`, and `uname -s`.
 - **`Error: context with name "init" not found` on shell startup** — your `switcher` (kubeswitch) binary is too old to support shell integration. Upgrade it (see the install section) — `source <(switcher init zsh)` only works on v0.10+.
