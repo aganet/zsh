@@ -163,4 +163,3 @@ fi
 # Host-local overrides (machine-specific tweaks)
 # ============================================================================
 [[ -f "$ZDOTDIR/local.zsh" ]] && source "$ZDOTDIR/local.zsh"
-eval "$(mise activate zsh)"
