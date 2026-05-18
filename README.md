@@ -297,3 +297,4 @@ Modular layout inspired by [radleylewis/dotfiles](https://github.com/radleylewis
 ## License
 
 MIT License. Use it, tweak it, fork it.
+
