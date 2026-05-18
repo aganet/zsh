@@ -7,6 +7,21 @@ HISTFILE="$XDG_DATA_HOME/zsh/.zhistory"
 SAVEHIST=1000000
 HISTSIZE=1000000
 [[ -d "${HISTFILE:h}" ]] || mkdir -p "${HISTFILE:h}"
+
+# First-run migration: if HISTFILE doesn't exist yet but a legacy ~/.zsh_history
+# does, import it (deduped, preserving order) so switching to this config never
+# looks like "lost history". The legacy file is kept and a timestamped backup
+# is written next to it. Subsequent runs are a no-op (HISTFILE now exists).
+if [[ ! -s "$HISTFILE" && -s "$HOME/.zsh_history" ]]; then
+  cp "$HOME/.zsh_history" "$HOME/.zsh_history.bak.$(date +%Y%m%d-%H%M%S)"
+  if [[ -f "$HISTFILE" ]]; then
+    awk '!seen[$0]++' "$HOME/.zsh_history" "$HISTFILE" > "$HISTFILE.tmp" \
+      && mv "$HISTFILE.tmp" "$HISTFILE"
+  else
+    awk '!seen[$0]++' "$HOME/.zsh_history" > "$HISTFILE"
+  fi
+  chmod 600 "$HISTFILE"
+fi
 setopt share_history          # share history across all open shells
 setopt hist_expire_dups_first # prune duplicates first when trimming history
 setopt hist_ignore_dups       # don't store consecutive duplicates

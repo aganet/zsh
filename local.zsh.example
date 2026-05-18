@@ -1,0 +1,64 @@
+# Host/identity-specific config — copy to local.zsh and edit.
+#
+#   cp local.zsh.example local.zsh
+#
+# local.zsh is gitignored, so anything sensitive (internal hostnames, service
+# principal IDs, work SSH usernames, etc.) stays off GitHub. The repo's .zshrc
+# sources local.zsh at the very end, so anything here can override defaults.
+
+typeset -U path
+
+# -- Personal PATH additions (only if the dir exists) -----------------------
+[[ -d "${KREW_ROOT:-$HOME/.krew}/bin" ]] && path=("${KREW_ROOT:-$HOME/.krew}/bin" $path)
+[[ -d "/usr/local/go/bin" ]]              && path=("/usr/local/go/bin" $path)
+[[ -d "$HOME/.kubescape/bin" ]]           && path=("$HOME/.kubescape/bin" $path)
+export PATH
+
+# -- switcher / switch (k8s context switcher) -------------------------------
+if command -v switcher &>/dev/null; then
+  source <(switcher init zsh)
+  alias s=switch
+  command -v switch &>/dev/null && source <(switch completion zsh)
+fi
+
+# -- Nix (single-user install) ----------------------------------------------
+[ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+
+# -- Tilix / VTE integration ------------------------------------------------
+if [ -n "$TILIX_ID" ] || [ -n "$VTE_VERSION" ]; then
+  [ -f /etc/profile.d/vte.sh ] && source /etc/profile.d/vte.sh
+fi
+
+# -- Legacy bash aliases ----------------------------------------------------
+[ -f "$HOME/.bash_aliases" ] && source "$HOME/.bash_aliases"
+
+# -- Personal aliases — replace with your own -------------------------------
+# alias sshbox1='ssh user@10.0.0.10'
+# alias sshbox2='ssh user@10.0.0.11'
+
+# -- Work-specific terraform with a dedicated Azure config dir --------------
+# alias tfp='AZURE_CONFIG_DIR="$HOME/.azure-tf-sp" tf plan -out=tfplan'
+# alias tfa='AZURE_CONFIG_DIR="$HOME/.azure-tf-sp" tf apply tfplan'
+
+# -- Up/Down do prefix-history search instead of plain scroll ---------------
+bindkey '\e[A' history-search-backward
+bindkey '\e[B' history-search-forward
+
+# -- Lazy-load nvm (mise is preferred; this is a fallback) ------------------
+if [[ -d "$HOME/.nvm" ]]; then
+  export NVM_DIR="$HOME/.nvm"
+  nvm() { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; nvm "$@"; }
+  node() { nvm "$@"; }
+  npm()  { nvm "$@"; }
+  npx()  { nvm "$@"; }
+fi
+
+# -- WezTerm: export current kube context as a user var ---------------------
+if [[ "$TERM_PROGRAM" == "WezTerm" ]] && command -v kubectl &>/dev/null; then
+  _wezterm_set_kube_context() {
+    local ctx
+    ctx=$(kubectl config current-context 2>/dev/null || echo "—")
+    printf "\033]1337;SetUserVar=%s=%s\007" "kube_context" "$(printf '%s' "$ctx" | base64)"
+  }
+  precmd_functions+=(_wezterm_set_kube_context)
+fi

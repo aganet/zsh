@@ -30,7 +30,7 @@ Repo: [github.com/aganet/zsh](https://github.com/aganet/zsh)
 - `pluginrc` → plugins
 - `optionrc` → shell options + history
 - `aliasrc` → aliases
-- `local.zsh` → machine-specific overrides (git-ignored)
+- `local.zsh` → machine-specific overrides (git-ignored; copy from `local.zsh.example`)
 
 ---
 
@@ -45,10 +45,17 @@ Repo: [github.com/aganet/zsh](https://github.com/aganet/zsh)
 ```bash
 git clone https://github.com/aganet/zsh.git ~/.config/zsh
 
-touch ~/.zshenv
-grep -qxF 'export ZDOTDIR="$HOME/.config/zsh"' ~/.zshenv || \
-  echo 'export ZDOTDIR="$HOME/.config/zsh"' >> ~/.zshenv
+# Symlink the bundled .zshenv so $ZDOTDIR is set before zsh picks a .zshrc.
+# (If you already have ~/.zshenv, this backs it up.)
+[ -e ~/.zshenv ] && [ ! -L ~/.zshenv ] && mv ~/.zshenv ~/.zshenv.bak
+ln -sf ~/.config/zsh/.zshenv ~/.zshenv
 ```
+
+> **History is preserved automatically.** On first launch, if a legacy
+> `~/.zsh_history` exists, [optionrc](optionrc) imports it into
+> `$XDG_DATA_HOME/zsh/.zhistory` (deduped) and writes a timestamped backup
+> at `~/.zsh_history.bak.<timestamp>`. The original `~/.zsh_history` is left
+> in place — nothing is deleted.
 
 ### 2. Oh My Zsh + Powerlevel10k + custom plugins
 
@@ -286,7 +293,6 @@ All in `aliasrc`, each block gated by `command -v <tool>`. Inspect the file for 
 ## Credits
 
 Modular layout inspired by [radleylewis/dotfiles](https://github.com/radleylewis/dotfiles/tree/master/.config/zsh).
-
 
 ## License
 
