@@ -66,6 +66,11 @@ if [[ -d "$HOME/.local/share/pnpm" ]]; then
   path=("$PNPM_HOME" $path)
 fi
 
+# Krew (kubectl plugin manager), system Go install, kubescape
+[[ -d "${KREW_ROOT:-$HOME/.krew}/bin" ]] && path=("${KREW_ROOT:-$HOME/.krew}/bin" $path)
+[[ -d "/usr/local/go/bin"            ]] && path=("/usr/local/go/bin" $path)
+[[ -d "$HOME/.kubescape/bin"         ]] && path=("$HOME/.kubescape/bin" $path)
+
 export PATH
 
 # ============================================================================
@@ -110,6 +115,44 @@ command -v mise &>/dev/null && eval "$(mise activate zsh)"
 if command -v kubectl &>/dev/null && [[ -z "${_comps[kubectl]}" ]]; then
   source <(kubectl completion zsh)
 fi
+
+# switcher / switch — k8s context switcher (https://github.com/danielfoehrKn/kubeswitch)
+if command -v switcher &>/dev/null; then
+  source <(switcher init zsh)
+  alias s=switch
+  command -v switch &>/dev/null && source <(switch completion zsh)
+fi
+
+# Nix (single-user install)
+[ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+
+# Tilix / VTE integration (shell-aware terminal features on Linux)
+if [ -n "$TILIX_ID" ] || [ -n "$VTE_VERSION" ]; then
+  [ -f /etc/profile.d/vte.sh ] && source /etc/profile.d/vte.sh
+fi
+
+# NVM (lazy-loaded — mise is the preferred runtime manager, this is a fallback
+# for repos that still expect nvm). First call to nvm/node/npm/npx sources it.
+if [[ -d "$HOME/.nvm" ]] && ! command -v mise &>/dev/null; then
+  export NVM_DIR="$HOME/.nvm"
+  nvm()  { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; nvm  "$@"; }
+  node() { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; node "$@"; }
+  npm()  { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; npm  "$@"; }
+  npx()  { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; npx  "$@"; }
+fi
+
+# WezTerm: export current kube context as a user var (consumable in tab titles)
+if [[ "$TERM_PROGRAM" == "WezTerm" ]] && command -v kubectl &>/dev/null; then
+  _wezterm_set_kube_context() {
+    local ctx
+    ctx=$(kubectl config current-context 2>/dev/null || echo "—")
+    printf "\033]1337;SetUserVar=%s=%s\007" "kube_context" "$(printf '%s' "$ctx" | base64)"
+  }
+  precmd_functions+=(_wezterm_set_kube_context)
+fi
+
+# Legacy ~/.bash_aliases (sourced if present — common bash-migration convention)
+[ -f "$HOME/.bash_aliases" ] && source "$HOME/.bash_aliases"
 
 # FZF — platform-aware install paths
 case "$CURRENT_OS" in
