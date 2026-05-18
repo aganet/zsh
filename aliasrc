@@ -43,6 +43,65 @@ case "$CURRENT_OS" in
     ;;
 esac
 
+# -- _macos_update_interactive: pick which softwareupdate items to install ---
+# Lists every pending Apple update with size, "Recommended", and "restart"
+# flags, then prompts y/N/q per item. Quitting (q) or no items selected is
+# fine — exits 0 so the caller's `update()` continues with brew/mise/etc.
+# Intentionally NOT used outside macOS — gated by the caller.
+_macos_update_interactive() {
+  command -v softwareupdate &>/dev/null || return 0
+
+  print -P "%F{cyan}   Scanning for Apple updates…%f"
+  local raw
+  raw=$(softwareupdate --list 2>&1)
+
+  if ! print -- "$raw" | grep -q '^\* Label:'; then
+    print -P "%F{green}   ✔ no pending Apple updates%f"
+    return 0
+  fi
+
+  # Parse the alternating "* Label: …" + "<TAB>Title: …" pairs into arrays.
+  local -a labels titles
+  local line label=""
+  while IFS= read -r line; do
+    if [[ "$line" == \*\ Label:\ * ]]; then
+      label="${line#\* Label: }"
+    elif [[ -n "$label" && "$line" == *Title:* ]]; then
+      titles+=("${line#	}")
+      labels+=("$label")
+      label=""
+    fi
+  done < <(print -- "$raw")
+
+  print -P "\n%F{cyan}   ${#labels[@]} pending update(s):%f"
+  local i
+  for (( i=1; i<=${#labels[@]}; i++ )); do
+    print -P "     %F{yellow}$i)%f ${labels[$i]}"
+    print    "        ${titles[$i]}"
+  done
+  print
+
+  local -a chosen
+  for (( i=1; i<=${#labels[@]}; i++ )); do
+    local reply
+    print -nP "%F{cyan}   Install '${labels[$i]}'? [y/N/q] %f"
+    read -r reply
+    case "$reply" in
+      y|Y|yes) chosen+=("${labels[$i]}") ;;
+      q|Q)     print -P "%F{yellow}   aborted by user%f"; break ;;
+      *)       ;;  # default skip
+    esac
+  done
+
+  if (( ${#chosen[@]} == 0 )); then
+    print -P "%F{yellow}   nothing selected — skipping softwareupdate%f"
+    return 0
+  fi
+
+  print -P "%F{cyan}   Installing: ${(j:, :)chosen}%f"
+  sudo softwareupdate -i "${chosen[@]}"
+}
+
 # -- update: single command that upgrades the whole system -------------------
 # Picks the right native package manager by detection (not by $CURRENT_OS),
 # then refreshes Homebrew (if installed), Oh My Zsh, its custom plugins,
@@ -63,7 +122,7 @@ update() {
   elif command -v zypper &>/dev/null; then
     sudo zypper refresh && sudo zypper update -y
   elif [[ "$CURRENT_OS" == "macos" ]]; then
-    softwareupdate -i -a
+    _macos_update_interactive || return
   else
     print -P "%F{yellow}   no supported system package manager found%f"
   fi
