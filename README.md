@@ -1,6 +1,6 @@
 # My zsh config
 
-![My zsh setup in action](docs/img/zsh.png)
+![My zsh setup in action](https://raw.githubusercontent.com/aganet/aganet/main/assets/zsh.png)
 
 Cross-platform zsh config for macOS, Arch, Fedora, and Linux.
 
