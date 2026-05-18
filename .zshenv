@@ -11,5 +11,5 @@
 
 export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
 
-# Rust toolchain (no-op if cargo isn't installed)
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# Rust toolchain — no-op if cargo isn't installed
+[ -r "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
