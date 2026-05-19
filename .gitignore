@@ -1,5 +1,6 @@
 .zcompdump*
 .zsh_history
 .zhistory
+.zsh_sessions/
 local.zsh
 
