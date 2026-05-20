@@ -342,6 +342,47 @@ alias psg='ps aux | grep -v grep | grep -i'      # fuzzy ps search
 alias mem='ps aux --sort=-%mem | head -n 11'     # top 10 memory consumers
 alias cpu='ps aux --sort=-%cpu | head -n 11'     # top 10 cpu consumers
 
+# -- Alias introspection -----------------------------------------------------
+# Show only YOUR aliases (from aliasrc + local.zsh), filtering out the ~460
+# that come from OMZ plugins. Optionally filter by pattern.
+#
+# Usage:
+#   myalias              list all your aliases
+#   myalias kube         only those whose name OR expansion matches "kube"
+#   myalias --files      print the source file alongside each alias
+myalias() {
+  local pattern="" show_files=0
+  while (( $# )); do
+    case "$1" in
+      --files) show_files=1 ;;
+      *)       pattern="$1" ;;
+    esac
+    shift
+  done
+
+  local files=("$ZDOTDIR/aliasrc" "$ZDOTDIR/local.zsh")
+  local f line
+  for f in "${files[@]}"; do
+    [[ -f "$f" ]] || continue
+    # Match both plain `alias foo='…'` and `command -v x && alias foo='…'`.
+    # Use `command grep` because `grep` is aliased to `rg` earlier in this file.
+    command grep -nE "^[[:space:]]*alias[[:space:]]+[a-zA-Z_-]+=|&&[[:space:]]+alias[[:space:]]+[a-zA-Z_-]+=" "$f" |
+      command sed -E "s|^([0-9]+):.*alias |\1\t|; s|^([0-9]+):.*&&[[:space:]]+alias |\1\t|" |
+      while IFS=$'\t' read -r lineno aliasdef; do
+        # Skip comments inside conditional blocks
+        [[ "$aliasdef" =~ ^# ]] && continue
+        if [[ -n "$pattern" ]] && ! [[ "$aliasdef" == *"$pattern"* ]]; then
+          continue
+        fi
+        if (( show_files )); then
+          printf "%-20s %s:%s\n" "${aliasdef%%=*}" "$(basename $f)" "$lineno"
+        else
+          print -- "$aliasdef"
+        fi
+      done
+  done | sort -u
+}
+
 # -- Security scanning -------------------------------------------------------
 # All scanners are command -v gated, so missing tools silently no-op.
 # Suggested brew install for a full devsecops stack:
