@@ -73,17 +73,6 @@ git clone --depth=1 https://github.com/MichaelAquilina/zsh-you-should-use      "
 git clone --depth=1 https://github.com/fdellwing/zsh-bat                       "$ZSH_CUSTOM/plugins/zsh-bat"
 ```
 
-`autojump` is also referenced (`j <name>` jumping). Install via:
-
-```bash
-# macOS
-brew install autojump
-# Arch
-sudo pacman -S autojump
-# Ubuntu/Debian
-sudo apt install autojump
-```
-
 ### 3. CLI tools (Homebrew)
 
 On Linux, install Homebrew first:

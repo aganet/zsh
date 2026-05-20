@@ -341,3 +341,41 @@ alias weather='curl -s "https://wttr.in/?format=3"'
 alias psg='ps aux | grep -v grep | grep -i'      # fuzzy ps search
 alias mem='ps aux --sort=-%mem | head -n 11'     # top 10 memory consumers
 alias cpu='ps aux --sort=-%cpu | head -n 11'     # top 10 cpu consumers
+
+# -- Security scanning -------------------------------------------------------
+# Scan the current repo for leaked secrets with gitleaks.
+#
+# Usage:
+#   secscan-leaks               working-tree scan (fast — staged + unstaged)
+#   secscan-leaks --all         scan FULL git history (slow but thorough)
+#   secscan-leaks --redact      hide actual secret values in the report
+#   secscan-leaks --json FILE   write findings to FILE.json
+#
+# Exit code: 0 = clean, non-zero = findings present (CI-friendly).
+secscan-leaks() {
+  command -v gitleaks &>/dev/null || {
+    print -P "%F{red}gitleaks not installed — brew install gitleaks%f"
+    return 127
+  }
+  local args=(detect --source . --verbose --no-banner)
+  local out_json=""
+  while (( $# )); do
+    case "$1" in
+      --all)    args+=(--log-opts="--all") ;;
+      --redact) args+=(--redact) ;;
+      --json)   out_json="$2"; args+=(--report-format=json --report-path="$2"); shift ;;
+      *)        args+=("$1") ;;
+    esac
+    shift
+  done
+  gitleaks "${args[@]}"
+  local rc=$?
+  if (( rc == 0 )); then
+    print -P "%F{green}✔ no secrets found%f"
+  else
+    print -P "%F{red}✘ findings detected (gitleaks exit=$rc)%f"
+    [[ -n "$out_json" ]] && print -P "%F{cyan}  full report: $out_json%f"
+  fi
+  return $rc
+}
+alias glscan='secscan-leaks'                     # short form, no OMZ collision

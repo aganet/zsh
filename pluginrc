@@ -38,7 +38,6 @@ plugins=(
   colorize
   encode64
   rust
-  autojump
 
   # ergonomics
   sudo                      # Esc-Esc to prepend `sudo` to the current line
