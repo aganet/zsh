@@ -12,7 +12,14 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # quote URLs manually if needed.
 DISABLE_MAGIC_FUNCTIONS=true
 
-# Base plugins (all platforms)
+# you-should-use: prints a yellow reminder when you type a command for which
+# an alias exists ("You should use: gp"). Custom plugin — only enable if the
+# user has actually cloned it into $ZSH_CUSTOM/plugins.
+unset YSU_HARDCORE             # defensively clear any inherited value
+YSU_MESSAGE_POSITION="after"   # show reminder AFTER command output, not before
+# YSU_HARDCORE=1               # uncomment to BLOCK commands and force the alias
+
+# Base plugins (all platforms) — mirrors the original ~/.zshrc plugin list
 # NOTE: fzf-tab must come before zsh-autosuggestions and fast-syntax-highlighting
 plugins=(
   git
@@ -23,13 +30,20 @@ plugins=(
   cp
   colorize
   encode64
+  rust
+  autojump
   zsh-autosuggestions
   fast-syntax-highlighting
 )
 
+# Custom community plugins — only enabled if cloned locally
+[[ -d "${ZSH_CUSTOM:-$ZSH/custom}/plugins/you-should-use" ]] && plugins+=(you-should-use)
+[[ -d "${ZSH_CUSTOM:-$ZSH/custom}/plugins/zsh-bat"        ]] && plugins+=(zsh-bat)
+
 # DevOps tools — only load if the binary is on $PATH
 command -v docker    &>/dev/null && plugins+=(docker docker-compose)
 command -v kubectl   &>/dev/null && plugins+=(kubectl)
+command -v minikube  &>/dev/null && plugins+=(minikube)
 command -v helm      &>/dev/null && plugins+=(helm)
 command -v terraform &>/dev/null && plugins+=(terraform)
 command -v aws       &>/dev/null && plugins+=(aws)

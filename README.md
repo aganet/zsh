@@ -69,6 +69,19 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions          "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
 git clone --depth=1 https://github.com/zdharma-continuum/fast-syntax-highlighting "$ZSH_CUSTOM/plugins/fast-syntax-highlighting"
 git clone --depth=1 https://github.com/Aloxaf/fzf-tab                         "$ZSH_CUSTOM/plugins/fzf-tab"
+git clone --depth=1 https://github.com/MichaelAquilina/zsh-you-should-use      "$ZSH_CUSTOM/plugins/you-should-use"
+git clone --depth=1 https://github.com/fdellwing/zsh-bat                       "$ZSH_CUSTOM/plugins/zsh-bat"
+```
+
+`autojump` is also referenced (`j <name>` jumping). Install via:
+
+```bash
+# macOS
+brew install autojump
+# Arch
+sudo pacman -S autojump
+# Ubuntu/Debian
+sudo apt install autojump
 ```
 
 ### 3. CLI tools (Homebrew)
