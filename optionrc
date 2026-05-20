@@ -28,9 +28,16 @@ setopt hist_ignore_dups       # don't store consecutive duplicates
 setopt hist_ignore_space      # don't store commands starting with a space
 setopt hist_verify            # show command before running on `!` expansion
 
-# Up/Down arrows: prefix-search history (type "git" + ↑ → only past `git …` lines)
-bindkey '\e[A' history-search-backward
-bindkey '\e[B' history-search-forward
+# Up/Down arrows: substring history search if the plugin is loaded, otherwise
+# fall back to the built-in prefix search. Substring is strictly more useful —
+# "kubectl" + ↑ finds any past line CONTAINING kubectl, not just starting with it.
+if [[ -n "${functions[history-substring-search-up]}" ]]; then
+  bindkey '\e[A' history-substring-search-up
+  bindkey '\e[B' history-substring-search-down
+else
+  bindkey '\e[A' history-search-backward
+  bindkey '\e[B' history-search-forward
+fi
 
 # -- Shell options -----------------------------------------------------------
 setopt correct                # autocorrect command typos

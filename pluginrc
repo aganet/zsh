@@ -32,6 +32,17 @@ plugins=(
   encode64
   rust
   autojump
+
+  # ergonomics
+  sudo                      # Esc-Esc to prepend `sudo` to the current line
+  extract                   # `extract foo.tar.gz` — any archive, one command
+  copypath copyfile copybuffer   # copy pwd / file / current command line to clipboard
+  history-substring-search  # Up/Down match substrings, not just prefixes
+  alias-finder              # suggest existing aliases (companion to you-should-use)
+  command-not-found         # "command not found: htop → brew install htop"
+  jsontools                 # pp_json / unquote_json / urlencode_json …
+  gitignore                 # `gi macos,node > .gitignore` (gitignore.io fetcher)
+
   zsh-autosuggestions
   fast-syntax-highlighting
 )
@@ -43,11 +54,20 @@ plugins=(
 # DevOps tools — only load if the binary is on $PATH
 command -v docker    &>/dev/null && plugins+=(docker docker-compose)
 command -v kubectl   &>/dev/null && plugins+=(kubectl)
+command -v kubectx   &>/dev/null && plugins+=(kubectx)
+command -v k9s       &>/dev/null && plugins+=(k9s)
+command -v kind      &>/dev/null && plugins+=(kind)
 command -v minikube  &>/dev/null && plugins+=(minikube)
 command -v helm      &>/dev/null && plugins+=(helm)
 command -v terraform &>/dev/null && plugins+=(terraform)
 command -v aws       &>/dev/null && plugins+=(aws)
 command -v az        &>/dev/null && plugins+=(azure)
+command -v gh        &>/dev/null && plugins+=(gh)
+command -v argocd    &>/dev/null && plugins+=(argocd)
+command -v flux      &>/dev/null && plugins+=(fluxcd)
+command -v gcloud    &>/dev/null && plugins+=(gcloud)
+command -v direnv    &>/dev/null && plugins+=(direnv)
+command -v mise      &>/dev/null && plugins+=(mise)
 
 # Ruby toolchain
 command -v rbenv &>/dev/null && plugins+=(bundler rake rbenv ruby)
