@@ -343,15 +343,20 @@ alias mem='ps aux --sort=-%mem | head -n 11'     # top 10 memory consumers
 alias cpu='ps aux --sort=-%cpu | head -n 11'     # top 10 cpu consumers
 
 # -- Security scanning -------------------------------------------------------
-# Scan the current repo for leaked secrets with gitleaks.
-#
+# All scanners are command -v gated, so missing tools silently no-op.
+# Suggested brew install for a full devsecops stack:
+#   brew install gitleaks trufflehog osv-scanner semgrep \
+#                trivy grype syft cosign \
+#                tflint checkov \
+#                kube-score popeye kubescape kube-bench \
+#                sops age conftest
+
+# secscan-leaks — gitleaks on the current repo
 # Usage:
-#   secscan-leaks               working-tree scan (fast — staged + unstaged)
+#   secscan-leaks               working-tree scan (fast)
 #   secscan-leaks --all         scan FULL git history (slow but thorough)
 #   secscan-leaks --redact      hide actual secret values in the report
-#   secscan-leaks --json FILE   write findings to FILE.json
-#
-# Exit code: 0 = clean, non-zero = findings present (CI-friendly).
+#   secscan-leaks --json FILE   write findings to FILE
 secscan-leaks() {
   command -v gitleaks &>/dev/null || {
     print -P "%F{red}gitleaks not installed — brew install gitleaks%f"
@@ -378,4 +383,76 @@ secscan-leaks() {
   fi
   return $rc
 }
-alias glscan='secscan-leaks'                     # short form, no OMZ collision
+
+# secscan — umbrella: runs every installed scanner relevant to the current dir
+# Detects manifests (Cargo.toml, package.json, *.tf, Dockerfile, k8s yaml) and
+# fires only the scanners that match. Skips scanners not installed.
+secscan() {
+  local rc=0
+  _secscan_section() { print -P "\n%F{cyan}━━ $1 ━━%f"; }
+
+  _secscan_section "Secrets"
+  command -v gitleaks   &>/dev/null && { gitleaks detect --source . --verbose --no-banner --redact || rc=1; }
+  command -v trufflehog &>/dev/null && { trufflehog filesystem . --no-update --only-verified 2>/dev/null || rc=1; }
+
+  _secscan_section "SAST (code patterns)"
+  command -v semgrep &>/dev/null && { semgrep --config=auto --quiet --error . || rc=1; }
+
+  _secscan_section "Dependencies"
+  command -v osv-scanner &>/dev/null && { osv-scanner -r . 2>/dev/null || rc=1; }
+  [[ -f package.json ]] && command -v npm    &>/dev/null && { npm audit --omit=dev 2>/dev/null || rc=1; }
+  [[ -f Cargo.toml   ]] && command -v cargo  &>/dev/null && { cargo audit 2>/dev/null           || rc=1; }
+  [[ -f go.mod       ]] && command -v govulncheck &>/dev/null && { govulncheck ./... || rc=1; }
+
+  if ls *.tf **/*.tf 2>/dev/null | head -1 >/dev/null; then
+    _secscan_section "IaC (Terraform)"
+    command -v tflint  &>/dev/null && { tflint  || rc=1; }
+    command -v checkov &>/dev/null && { checkov -d . --quiet --compact || rc=1; }
+  fi
+
+  if [[ -f Dockerfile ]] || ls *.dockerfile **/Dockerfile 2>/dev/null | head -1 >/dev/null; then
+    _secscan_section "Container (Dockerfile)"
+    command -v trivy   &>/dev/null && { trivy config . --quiet || rc=1; }
+    command -v hadolint &>/dev/null && { find . -name "Dockerfile*" -exec hadolint {} + || rc=1; }
+  fi
+
+  if find . -type f \( -name "*.yaml" -o -name "*.yml" \) -exec grep -l "^kind: " {} + 2>/dev/null | head -1 >/dev/null; then
+    _secscan_section "Kubernetes manifests"
+    command -v kube-score &>/dev/null && { find . -type f \( -name "*.yaml" -o -name "*.yml" \) -exec kube-score score {} + 2>/dev/null || rc=1; }
+    command -v kubescape  &>/dev/null && { kubescape scan . --format pretty-printer 2>/dev/null || rc=1; }
+  fi
+
+  print
+  (( rc == 0 )) && print -P "%F{green}✔ all scanners passed%f" \
+                || print -P "%F{red}✘ findings above (rc=$rc)%f"
+  return $rc
+}
+
+# Short aliases for individual tools (each gated so missing tools no-op)
+alias glscan='secscan-leaks'                                          # gitleaks shortcut
+command -v trufflehog &>/dev/null && alias th='trufflehog filesystem'
+command -v semgrep    &>/dev/null && alias sg='semgrep --config=auto'
+command -v osv-scanner &>/dev/null && alias osv='osv-scanner -r'
+
+# IaC scanners
+command -v tflint    &>/dev/null && alias tfl='tflint'
+command -v checkov   &>/dev/null && alias ck='checkov -d .'
+command -v conftest  &>/dev/null && alias cft='conftest test'
+
+# Container / image scanners
+command -v trivy     &>/dev/null && { alias tvy='trivy'; alias tvyi='trivy image'; alias tvyc='trivy config .'; }
+command -v grype     &>/dev/null && alias gry='grype'
+command -v syft      &>/dev/null && alias sbom='syft -o spdx-json'           # generate SBOM
+command -v cosign    &>/dev/null && { alias cosv='cosign verify'; alias coss='cosign sign'; }
+command -v crane     &>/dev/null && alias crn='crane'                         # registry ops
+command -v dive      &>/dev/null && alias dv='dive'                           # image layer inspect
+
+# Kubernetes
+command -v kube-score &>/dev/null && alias kscore='kube-score score'
+command -v kubescape  &>/dev/null && alias kscape='kubescape scan'
+command -v kube-bench &>/dev/null && alias kbench='kube-bench'
+command -v popeye     &>/dev/null && alias pop='popeye'
+
+# Secret management
+command -v sops &>/dev/null && { alias sope='sops -e -i'; alias sopd='sops -d -i'; }   # encrypt/decrypt in place
+command -v age  &>/dev/null && alias agee='age -e'
