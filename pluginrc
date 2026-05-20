@@ -39,13 +39,22 @@ plugins=(
   copypath copyfile copybuffer   # copy pwd / file / current command line to clipboard
   history-substring-search  # Up/Down match substrings, not just prefixes
   alias-finder              # suggest existing aliases (companion to you-should-use)
-  command-not-found         # "command not found: htop → brew install htop"
   jsontools                 # pp_json / unquote_json / urlencode_json …
   gitignore                 # `gi macos,node > .gitignore` (gitignore.io fetcher)
 
   zsh-autosuggestions
   fast-syntax-highlighting
 )
+
+# command-not-found only works on Linux (consults apt/dnf/pacman). The macOS
+# backend (homebrew/command-not-found tap) was deprecated and removed, so the
+# plugin is dead code there. Load only when a Linux backend is actually present.
+if [[ "$CURRENT_OS" != "macos" ]] && \
+   { [[ -x /etc/zsh_command_not_found ]] || \
+     [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]] || \
+     command -v dnf &>/dev/null; }; then
+  plugins+=(command-not-found)
+fi
 
 # Custom community plugins — only enabled if cloned locally
 [[ -d "${ZSH_CUSTOM:-$ZSH/custom}/plugins/you-should-use" ]] && plugins+=(you-should-use)
@@ -60,6 +69,7 @@ command -v kind      &>/dev/null && plugins+=(kind)
 command -v minikube  &>/dev/null && plugins+=(minikube)
 command -v helm      &>/dev/null && plugins+=(helm)
 command -v terraform &>/dev/null && plugins+=(terraform)
+command -v ansible   &>/dev/null && plugins+=(ansible)
 command -v aws       &>/dev/null && plugins+=(aws)
 command -v az        &>/dev/null && plugins+=(azure)
 command -v gh        &>/dev/null && plugins+=(gh)
