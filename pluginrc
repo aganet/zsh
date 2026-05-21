@@ -32,7 +32,6 @@ plugins=(
   git
   fzf
   fzf-tab
-  dotenv
   vscode
   cp
   colorize
