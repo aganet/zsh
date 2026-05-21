@@ -4,8 +4,8 @@
 
 # -- History -----------------------------------------------------------------
 HISTFILE="$XDG_DATA_HOME/zsh/.zhistory"
-SAVEHIST=1000000
-HISTSIZE=1000000
+SAVEHIST=10000000
+HISTSIZE=10000000
 [[ -d "${HISTFILE:h}" ]] || mkdir -p "${HISTFILE:h}"
 
 # First-run migration: if HISTFILE doesn't exist yet but a legacy ~/.zsh_history
@@ -23,6 +23,8 @@ if [[ ! -s "$HISTFILE" && -s "$HOME/.zsh_history" ]]; then
   chmod 600 "$HISTFILE"
 fi
 setopt share_history          # share history across all open shells
+setopt extended_history       # save timestamp + duration with each entry
+setopt inc_append_history     # append to histfile as commands run, not just on exit
 setopt hist_expire_dups_first # prune duplicates first when trimming history
 setopt hist_ignore_dups       # don't store consecutive duplicates
 setopt hist_ignore_space      # don't store commands starting with a space
