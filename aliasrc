@@ -196,8 +196,13 @@ if command -v kubectl &>/dev/null; then
   alias ktop='kubectl top'
   alias kapi='kubectl api-resources'
 
-  # Ephemeral netshoot pod for in-cluster network debugging
-  alias kdebug='kubectl run debug-$RANDOM --rm -it --image=nicolaka/netshoot --restart=Never --'
+  # Ephemeral netshoot pod for in-cluster network debugging.
+  # Must be a function: $RANDOM in an alias expands once at definition time,
+  # so the pod name would never change and every call after the first fails.
+  kdebug() {
+    kubectl run "debug-${RANDOM}" --rm -it \
+      --image=nicolaka/netshoot --restart=Never -- "${@:-sh}"
+  }
 fi
 
 # kubectx / kubens (separate binaries — often installed via krew)
@@ -228,8 +233,15 @@ if command -v docker &>/dev/null; then
   alias dip="docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"
 fi
 
-# Docker Compose v2 (the modern `docker compose` form — space, no hyphen)
-if docker compose version &>/dev/null 2>&1; then
+# Docker Compose v2 (the modern `docker compose` form - space, no hyphen).
+# Filesystem check instead of `docker compose version`: that command forks
+# a real process on every shell startup (~50-100ms hit). Plugin path varies
+# by distro/install, so we check the common locations.
+if command -v docker &>/dev/null && \
+   { [[ -e /usr/lib/docker/cli-plugins/docker-compose ]] || \
+     [[ -e /usr/libexec/docker/cli-plugins/docker-compose ]] || \
+     [[ -e "$HOME/.docker/cli-plugins/docker-compose" ]] || \
+     [[ -e "${HOMEBREW_PREFIX:-/opt/homebrew}/lib/docker/cli-plugins/docker-compose" ]]; }; then
   alias dc='docker compose'
   alias dcu='docker compose up -d'
   alias dcd='docker compose down'
@@ -294,7 +306,8 @@ if command -v uv &>/dev/null; then
   alias uvrm='uv remove'            # remove a dep from pyproject.toml
   alias uvenv='uv venv'             # create .venv in current dir
   alias uvpy='uv python install'    # install a CPython version managed by uv
-  alias uvx='uvx'                   # one-shot tool runner (ships with uv)
+  # Note: `uvx` is a real binary shipped with uv (one-shot tool runner) -
+  # no alias needed, just call it directly.
 fi
 
 # -- GitHub CLI (gh) ---------------------------------------------------------
@@ -327,12 +340,40 @@ fi
 
 # -- Git extras (OMZ git plugin already covers gs/gco/gp/glo/etc.) -----------
 alias gpr='git pull --rebase'
-# Delete local branches whose remote tracking branch is gone
-alias gprune='git fetch --prune && git branch -vv | awk "/: gone]/{print \$1}" | xargs -r git branch -D'
+
+# Delete local branches whose remote tracking branch is gone.
+# Function instead of alias: cleaner awk single-quoting AND we avoid `xargs -r`
+# (GNU-only flag, missing from BSD xargs on macOS). Explicit empty-check
+# instead - portable and gives a friendlier "nothing to do" message.
+gprune() {
+  git fetch --prune || return
+  local stale
+  stale=$(git branch -vv | awk '/: gone]/ {print $1}')
+  if [[ -z "$stale" ]]; then
+    print -P "%F{green}gprune: no stale branches%f"
+    return 0
+  fi
+  print -- "$stale" | xargs git branch -D
+}
 
 # -- Networking & system -----------------------------------------------------
 alias myip='curl -s https://api.ipify.org && echo'
-alias localip="ip -4 addr show 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1"
+
+# Cross-platform LAN IP. The Linux form uses `ip`, which doesn't exist on macOS;
+# macOS uses `ipconfig getifaddr en0` (Wi-Fi) with `en1` as a fallback.
+localip() {
+  case "$CURRENT_OS" in
+    macos)
+      ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1
+      ;;
+    *)
+      ip -4 addr show 2>/dev/null \
+        | awk '/inet / && $2 !~ /^127/ {print $2}' \
+        | cut -d/ -f1
+      ;;
+  esac
+}
+
 alias ports='ss -tulpn 2>/dev/null || netstat -tulpn'
 alias listening='ss -tlpn 2>/dev/null || netstat -tlpn'
 alias weather='curl -s "https://wttr.in/?format=3"'

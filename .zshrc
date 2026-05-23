@@ -193,16 +193,26 @@ fi
 # Envman
 [ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
 
-# switch.sh
-[ -s /usr/local/bin/switch.sh ] && source /usr/local/bin/switch.sh
-
 # ============================================================================
 # Powerlevel10k Config
 # ============================================================================
-[[ -f "$ZDOTDIR/.p10k.zsh" ]] && source "$ZDOTDIR/.p10k.zsh" || \
-[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
+# Using if/elif (not `A && B || C`) so the conditional always exits 0 even
+# when no .p10k.zsh exists yet (otherwise the first prompt shows exit code 1).
+if   [[ -f "$ZDOTDIR/.p10k.zsh" ]]; then source "$ZDOTDIR/.p10k.zsh"
+elif [[ -f ~/.p10k.zsh          ]]; then source ~/.p10k.zsh
+fi
 
 # ============================================================================
 # Host-local overrides (machine-specific tweaks)
 # ============================================================================
-[[ -f "$ZDOTDIR/local.zsh" ]] && source "$ZDOTDIR/local.zsh"
+# Same reason: `if` exits 0 even when the file doesn't exist, so a missing
+# local.zsh (the common case on freshly-cloned hosts) doesn't taint $? for
+# the very first prompt.
+if [[ -f "$ZDOTDIR/local.zsh" ]]; then
+  source "$ZDOTDIR/local.zsh"
+fi
+
+# Make absolutely sure init ends clean - some plugins (gitstatusd etc.) can
+# briefly set $? while activating; we don't want that bleeding into the
+# user's first prompt.
+true
