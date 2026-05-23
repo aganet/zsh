@@ -42,7 +42,6 @@ else
 fi
 
 # -- Shell options -----------------------------------------------------------
-setopt correct                # autocorrect command typos
 setopt autocd                 # cd by typing directory name
 setopt extendedglob           # extended globbing patterns
 setopt nocaseglob             # case-insensitive globbing
