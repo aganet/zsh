@@ -194,6 +194,25 @@ if command -v kubectl &>/dev/null; then
   alias kev='kubectl get events --sort-by=.lastTimestamp'
   alias kaa='kubectl get all --all-namespaces'
 
+  # Tail logs for a pod by name without needing to know its namespace —
+  # useful when an `events` line shows `pod/foo-xyz` and you want logs.
+  # Usage: klogs <pod> [extra kubectl logs flags, e.g. --previous -f --tail=200]
+  klogs() {
+    if [[ -z "$1" ]]; then
+      echo "usage: klogs <pod-name> [kubectl logs flags...]" >&2
+      return 2
+    fi
+    local pod="$1"; shift
+    local ns
+    ns=$(kubectl get pod -A --field-selector=metadata.name="$pod" \
+          -o jsonpath='{.items[0].metadata.namespace}' 2>/dev/null)
+    if [[ -z "$ns" ]]; then
+      echo "klogs: pod '$pod' not found in any namespace" >&2
+      return 1
+    fi
+    kubectl logs -n "$ns" "$pod" "$@"
+  }
+
   # Verbose chronological event view. All-namespaces by default (auto-skipped
   # if the caller passes -n/-A), with NAMESPACE/FIRSTSEEN/COUNT columns kev
   # omits. Flags pass through to kubectl: `events -n foo`, `events -w`,
