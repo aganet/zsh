@@ -191,18 +191,19 @@ All in `aliasrc`, each block gated by `command -v <tool>`. Inspect the file for 
 
 ### Kubernetes
 
-| Alias                                 | Command                                       |
-|---------------------------------------|-----------------------------------------------|
-| `k`                                   | `kubectl`                                     |
-| `kpf`                                 | `kubectl port-forward`                        |
-| `kev`                                 | `kubectl get events --sort-by=.lastTimestamp` |
-| `kaa`                                 | `kubectl get all --all-namespaces`            |
-| `ktop` / `kapi`                       | `kubectl top` / `kubectl api-resources`       |
-| `kdebug`                              | ephemeral `netshoot` pod                      |
-| `kctx` / `kns`                        | `kubectx` / `kubens`                          |
-| `ks` / `k9`                           | `stern` / `k9s`                               |
-| `s`                                   | `switcher` (kubeswitch)                       |
-| `kindc` / `kindd` / `kindg` / `kindl` | `kind` create / delete / get / load-image     |
+| Alias                                 | Command                                                          |
+|---------------------------------------|------------------------------------------------------------------|
+| `k`                                   | `kubectl`                                                        |
+| `kpf`                                 | `kubectl port-forward`                                           |
+| `kev`                                 | `kubectl get events --sort-by=.lastTimestamp`                    |
+| `events`                              | verbose all-namespace events, oldest→newest (flags pass through) |
+| `kaa`                                 | `kubectl get all --all-namespaces`                               |
+| `ktop` / `kapi`                       | `kubectl top` / `kubectl api-resources`                          |
+| `kdebug`                              | ephemeral `netshoot` pod                                         |
+| `kctx` / `kns`                        | `kubectx` / `kubens`                                             |
+| `ks` / `k9`                           | `stern` / `k9s`                                                  |
+| `s`                                   | `switcher` (kubeswitch)                                          |
+| `kindc` / `kindd` / `kindg` / `kindl` | `kind` create / delete / get / load-image                        |
 
 ### Docker
 

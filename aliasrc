@@ -193,6 +193,23 @@ if command -v kubectl &>/dev/null; then
   alias kpf='kubectl port-forward'
   alias kev='kubectl get events --sort-by=.lastTimestamp'
   alias kaa='kubectl get all --all-namespaces'
+
+  # Verbose chronological event view. All-namespaces by default (auto-skipped
+  # if the caller passes -n/-A), with NAMESPACE/FIRSTSEEN/COUNT columns kev
+  # omits. Flags pass through to kubectl: `events -n foo`, `events -w`,
+  # `events --field-selector type=Warning`.
+  events() {
+    local args=("$@")
+    if ! [[ " ${args[*]} " =~ " -n " || " ${args[*]} " =~ " --namespace " \
+         || " ${args[*]} " =~ " -A " || " ${args[*]} " =~ " --all-namespaces " ]]; then
+      args=(--all-namespaces "${args[@]}")
+    fi
+    kubectl get events \
+      --sort-by=.lastTimestamp \
+      -o custom-columns=NAMESPACE:.metadata.namespace,LASTSEEN:.lastTimestamp,FIRSTSEEN:.firstTimestamp,COUNT:.count,TYPE:.type,REASON:.reason,OBJECT:.involvedObject.name,MESSAGE:.message \
+      "${args[@]}"
+  }
+
   alias ktop='kubectl top'
   alias kapi='kubectl api-resources'
 
