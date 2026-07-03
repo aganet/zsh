@@ -127,7 +127,12 @@ update() {
     print -P "%F{yellow}   no supported system package manager found%f"
   fi
 
-  command -v flatpak &>/dev/null && { print -P "%F{cyan}==>%f Flatpak"; flatpak update -y; }
+  if command -v flatpak &>/dev/null; then
+    print -P "%F{cyan}==>%f Flatpak"
+    flatpak update --user -y
+    # system-scope updates need root; polkit auth fails in TTY/SSH sessions
+    sudo flatpak update --system -y
+  fi
   command -v snap    &>/dev/null && { print -P "%F{cyan}==>%f Snap";    sudo snap refresh; }
 
   if command -v brew &>/dev/null; then
